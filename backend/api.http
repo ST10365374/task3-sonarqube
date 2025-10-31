@@ -1,0 +1,31 @@
+### Register User
+POST http://localhost:5000/api/auth/register
+Content-Type: application/json
+
+{
+  "fullName": "John Doe",
+  "idNumber": "8001015002087",
+  "accountNumber": "12345678",
+  "password": "Secret123!" 
+}
+
+### Login User
+POST http://localhost:5000/api/auth/login
+Content-Type: application/json
+
+{
+  "accountNumber": "12345678",
+  "password": "Secret123!"
+}
+
+### Make Payment (replace <TOKEN> with token from login response)
+POST http://localhost:5000/api/payments
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4YjZhN2FiZjg2ZGFiYzE5NzIxYjczNCIsImlhdCI6MTc1NjgwMTAyNCwiZXhwIjoxNzU2ODA0NjI0fQ.2ptEkKYyq2sSdMQ4_-GYI6Or7zyblzDHiZ0uLH8CIR4
+
+{
+  "amount": 500,
+  "currency": "USD",
+  "swiftCode": "ABCDUS33",
+  "payeeAccount": "9876543210"
+}

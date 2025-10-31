@@ -1,0 +1,444 @@
+/* ======================================= */
+/* 1. GLOBAL BASE STYLES */
+/* ======================================= */
+
+/* Global Page Layout */
+.page-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #f9fafb, #e9f3f9);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Titles */
+.title {
+    color: #004C6D; /* FNB Teal */
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.subtitle {
+    color: #6b7280; /* Muted grey */
+    font-size: 0.95rem;
+    margin-bottom: 2rem;
+}
+
+/* Messages */
+.message-text {
+    margin-top: 1rem;
+    font-weight: 500;
+}
+
+.success {
+    color: #16a34a; /* Green */
+}
+
+.error {
+    color: #dc2626; /* Red */
+}
+
+/* ======================================= */
+/* 2. CARD & FORM STYLES (Login/MakePayment) */
+/* ======================================= */
+
+/* Card Style */
+.card, .clean-card { /* Using clean-card for consistent modern look */
+    background: #ffffff;
+    padding: 2rem;
+    width: 380px;
+    border-radius: 20px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    max-width: 90%;
+}
+.clean-card {
+    width: 100%; /* Allows it to expand within a max-width container */
+    max-width: 1000px; /* Overrides the 380px for admin/dashboard views */
+    text-align: left;
+}
+
+/* Form Layout */
+.form-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+    text-align: left;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-label {
+    font-size: 0.9rem;
+    color: #374151;
+    margin-bottom: 0.3rem;
+    font-weight: 500;
+}
+
+.form-input {
+    padding: 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 12px;
+    outline: none;
+    transition: 0.2s;
+}
+
+.form-input:focus {
+    border-color: #0077B6; /* Capitec Blue */
+    box-shadow: 0 0 6px rgba(0, 119, 182, 0.3);
+}
+
+/* Primary Button (Standard Blue) */
+.primary-button {
+    background: #0077B6; /* Standard Blue */
+    color: white;
+    padding: 12px;
+    border: none;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.primary-button:hover {
+    background: #005f87; /* Darker on hover */
+}
+
+.primary-button.large {
+    font-size: 1.1rem;
+    padding: 0.8rem 1.6rem;
+    border-radius: 10px;
+    /* Uses the same color, but you can override if needed */
+}
+
+/* ======================================= */
+/* 3. NAVIGATION (Navbar) */
+/* ======================================= */
+
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 2rem;
+    background: #002d62; /* Deep Bank Blue */
+    color: white;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.nav-brand, .navbar-logo {
+    font-size: 1.4rem;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+}
+
+.nav-links-container, .navbar-right {
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+}
+
+.nav-link {
+    color: #e0e0e0;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s;
+}
+
+.nav-link:hover {
+    color: #00a8e8;
+}
+
+.nav-button.logout-btn {
+    background: #e63946; /* Clear Red for Logout */
+    border: none;
+    color: white;
+    padding: 0.6rem 1.2rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background 0.2s;
+}
+
+.nav-button.logout-btn:hover {
+    background: #d62828;
+}
+
+/* ======================================= */
+/* 4. WELCOME & HOME PAGE */
+/* ======================================= */
+
+.welcome-container, .home-container {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    background: linear-gradient(135deg, #004e92, #000428);
+    color: white;
+    padding: 20px;
+}
+.home-container {
+    height: calc(100vh - 70px); /* Adjust for fixed navbar */
+}
+
+.welcome-title, .home-title {
+    font-size: 3rem;
+    font-weight: bold;
+    margin-bottom: 15px;
+}
+
+.welcome-subtitle, .home-subtitle {
+    font-size: 1.5rem;
+    color: #f0f0f0;
+    margin-bottom: 30px;
+    opacity: 0.9;
+}
+
+.home-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+}
+
+/* Custom button styles for the Home page (if different from primary-button) */
+.secondary-button {
+    background: white;
+    padding: 12px 25px;
+    border-radius: 8px;
+    text-decoration: none;
+    color: #003d2b;
+    font-weight: bold;
+    border: 2px solid #003d2b;
+    transition: 0.3s;
+}
+
+.secondary-button:hover {
+    background: #003d2b;
+    color: white;
+}
+
+/* ======================================= */
+/* 5. ADMIN/USER DASHBOARD & TABLES */
+/* ======================================= */
+
+.dashboard-layout {
+    padding: 20px;
+    background-color: #f4f7fa; 
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+}
+
+.data-card {
+    background-color: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    padding: 30px;
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.card-title {
+    font-size: 1.8rem;
+    color: #333;
+    margin-bottom: 5px;
+    font-weight: 600;
+}
+
+.title-count {
+    font-size: 1.2rem;
+    color: #777;
+    font-weight: 400;
+    margin-left: 10px;
+}
+
+.divider {
+    border: none;
+    height: 1px;
+    background-color: #eee;
+    margin: 20px 0;
+}
+
+/* --- Table Styling (Standard for Payments) --- */
+.table-wrapper {
+    overflow-x: auto;
+}
+
+.payments-table {
+    width: 100%;
+    border-collapse: separate; 
+    border-spacing: 0;
+    font-size: 0.95rem;
+}
+
+.payments-table thead th {
+    background-color: #f7f9fc; /* Light header background */
+    color: #6a7c93;
+    text-align: left;
+    padding: 12px 15px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid #e1e4e8;
+}
+
+.payments-table tbody tr {
+    transition: background-color 0.2s;
+}
+
+.payments-table tbody tr:hover {
+    background-color: #f0f3f7; /* Hover effect */
+}
+
+.payments-table tbody td {
+    padding: 15px;
+    border-bottom: 1px solid #e1e4e8;
+    color: #555;
+    vertical-align: middle;
+}
+
+.th-right, .td-right {
+    text-align: right !important;
+    font-weight: 600;
+    color: #1e88e5; /* Highlight amount */
+}
+
+.user-details {
+    display: flex;
+    flex-direction: column;
+}
+.user-name {
+    font-weight: 600;
+    color: #333;
+}
+.user-account-number {
+    font-size: 0.8rem;
+    color: #888;
+}
+
+/* --- Status Badges (Standard for Payments) --- */
+.status-badge {
+    padding: 4px 10px;
+    border-radius: 16px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    display: inline-block;
+}
+
+.status-completed {
+    background-color: #e8f5e9; /* Light Green */
+    color: #43a047; /* Dark Green */
+}
+
+.status-pending {
+    background-color: #fff3e0; /* Light Orange */
+    color: #ffb300; /* Dark Orange */
+}
+
+.status-failed {
+    background-color: #fbe9e7; /* Light Red */
+    color: #e53935; /* Dark Red */
+}
+
+.status-default {
+    background-color: #f0f4f8; 
+    color: #607d8b;
+}
+
+/* --- Status Messages & Empty States --- */
+.status-message {
+    padding: 15px;
+    border-radius: 8px;
+    margin: 20px 0;
+    font-weight: 500;
+}
+
+.loading-message {
+    background-color: #e3f2fd; 
+    color: #1e88e5; 
+}
+
+.error-message {
+    background-color: #ffebee; 
+    color: #d32f2f; 
+}
+
+.no-data-message, .empty-state {
+    text-align: center;
+    color: #777;
+    padding: 20px;
+    font-size: 1.1rem;
+}
+
+/* ======================================= */
+/* 6. BACK BUTTON & UTILITIES */
+/* ======================================= */
+
+.back-button-container {
+    display: flex;
+    justify-content: flex-start;
+    width: 100%;
+    margin-top: 1rem;
+}
+
+.back-button {
+    background: none;
+    border: none;
+    font-size: 2rem;
+    color: #555;
+    cursor: pointer;
+    position: relative; 
+    padding: 0;
+    line-height: 1;
+    transition: color 0.3s ease;
+}
+
+.back-button:hover {
+    color: #004d9c;
+}
+
+/* Tooltip styles included here for completeness */
+.tooltiptext {
+    visibility: hidden;
+    width: 100px;
+    background-color: #555;
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 5px 0;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%;
+    left: 50%;
+    margin-left: -50px; 
+    opacity: 0;
+    transition: opacity 0.3s;
+    font-size: 0.8rem;
+}
+
+.back-button:hover .tooltiptext {
+    visibility: visible;
+    opacity: 1;
+}
+
+.tooltiptext::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: #555 transparent transparent transparent;
+}
