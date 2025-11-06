@@ -3,7 +3,7 @@ version: 2.1
 
 orbs:
   # Using the community SonarCloud orb for simplicity
-  sonarcloud: sonarcloud/sonarcloud@1.0.3
+  sonarcloud: sonarsource/sonarcloud@3.0.1
 
 jobs:
   install_and_test:
