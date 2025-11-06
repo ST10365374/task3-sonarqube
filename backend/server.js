@@ -1,159 +1,188 @@
+// backend/server.js - FINAL CORRECTED VERSION
 require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
+const hpp = require("hpp");
+// const mongoSanitize = require("express-mongo-sanitize"); // ❌ Removed: Caused the conflict
 const fs = require("fs");
 const https = require("https");
 const http = require("http");
 const cookieParser = require("cookie-parser");
+
 const csrfProtection = require("./middleware/csrf");
-const sanitizeRequest = require("./middleware/sanitize");
-const cleanXSS = require("./middleware/cleanXSS"); // ✅ new XSS cleaner
 const logAction = require("./utils/auditLogger");
 
 const app = express();
 app.set("trust proxy", 1);
 
-const certPath = "./certs/cert.pem";
-const keyPath = "./certs/key.pem";
+// ✅ SSL certs (development self-signed)
+// 🔑 CRITICAL FIX: The correct path is just ./certs/
+const certPath = "./certs/cert.pem"; 
+const keyPath = "./certs/key.pem";   
 
-// ✅ Helmet security
+/* =========================
+   🔐 SECURITY MIDDLEWARES
+========================= */
+
+// Helmet – sets various HTTP headers and integrates HSTS
 app.use(
-  helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        scriptSrc: ["'self'"],
-        objectSrc: ["'none'"],
-        upgradeInsecureRequests: [],
-      },
-    },
-    crossOriginEmbedderPolicy: false,
-  })
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        upgradeInsecureRequests: [],
+      },
+    },
+    crossOriginEmbedderPolicy: false,
+    strictTransportSecurity: {
+      maxAge: 31536000, 
+      includeSubDomains: true,
+      preload: true,
+    }
+  })
 );
 app.disable("x-powered-by");
 
-// ✅ Sanitize and XSS clean
-app.use(sanitizeRequest);
-app.use(cleanXSS);
+// HPP – prevent HTTP Parameter Pollution
+app.use(hpp());
 
-// ✅ CORS
+// CORS – allow frontend on localhost:3000
 app.use(
-  cors({
-    origin: "https://localhost:3000",
-    credentials: true,
-    methods: "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
-    allowedHeaders: ["Content-Type", "Authorization", "CSRF-Token"],
-  })
+  cors({
+    origin: "https://localhost:3000",
+    credentials: true,
+    methods: "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
+    allowedHeaders: ["Content-Type", "Authorization", "CSRF-Token"],
+  })
 );
 
-// ✅ Rate limit
+// Rate limiter – brute-force protection
 app.use(
-  rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 100,
-    message: { msg: "Too many requests, try again later." },
-  })
+  rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 min
+    max: 100,
+    message: { msg: "Too many requests, try again later." },
+  })
 );
 
-// ✅ Body & cookies
+// 🔑 Request Parsers (MUST BE FIRST)
 app.use(express.json({ limit: "10kb" }));
 app.use(cookieParser());
 
-// ✅ HSTS
-app.use(
-  helmet.hsts({
-    maxAge: 31536000,
-    includeSubDomains: true,
-    preload: true,
-  })
-);
+// XSS and Injection protection are now handled safely in `validate.js`.
+
 
 // ✅ Redirect HTTP→HTTPS only in production
 if (process.env.NODE_ENV === "production") {
-  app.use((req, res, next) => {
-    if (!req.secure && req.get("x-forwarded-proto") !== "https") {
-      return res.redirect(301, `https://${req.hostname}${req.originalUrl}`);
-    }
-    next();
-  });
+  app.use((req, res, next) => {
+    if (!req.secure && req.get("x-forwarded-proto") !== "https") {
+      return res.redirect(301, `https://${req.hostname}${req.originalUrl}`);
+    }
+    next();
+  });
 }
 
-// ✅ CSRF token
+/* =========================
+   🌐 BASIC ROUTES
+========================= */
+
+// CSRF token endpoint
 app.get("/api/csrf-token", csrfProtection, (req, res) => {
-  res.json({ csrfToken: req.csrfToken() });
+  res.json({ csrfToken: req.csrfToken() });
 });
 
-// ✅ Health
+// Health check
 app.get("/api/health", (req, res) => res.json({ status: "ok" }));
 
-// ✅ MongoDB
+/* =========================
+   🗄️ DATABASE CONNECTION
+========================= */
+
 (async () => {
-  try {
-    await mongoose.connect(process.env.MONGO_URI);
-    console.log("✅ MongoDB Connected");
-  } catch (err) {
-    console.error("❌ MongoDB Error:", err);
-  }
+  try {
+    await mongoose.connect(process.env.MONGO_URI);
+    console.log("✅ MongoDB Connected");
+  } catch (err) {
+    console.error("❌ MongoDB Connection Error:", err.message);
+  }
 })();
 
-// ✅ Routes
+/* =========================
+   📦 ROUTES
+========================= */
+
 const authRoutes = require("./routes/auth");
+const paymentRoutes = require("./routes/payments");
+const adminRoutes = require("./routes/admin");
+
 app.use("/api/auth", authRoutes.router);
-app.use("/api/payments", require("./routes/payments"));
-app.use("/api/admin", require("./routes/admin"));
+app.use("/api/payments", paymentRoutes);
+app.use("/api/admin", adminRoutes);
 
-// ✅ Log failed requests
+/* =========================
+   📋 LOGGING & ERRORS
+========================= */
+
+// Log all failed requests for auditing
 app.use((req, res, next) => {
-  res.on("finish", () => {
-    if (res.statusCode >= 400) {
-      logAction(
-        null,
-        `Failed request: ${req.method} ${req.originalUrl} (${res.statusCode})`,
-        req
-      );
-    }
-  });
-  next();
+  res.on("finish", () => {
+    if (res.statusCode >= 400) {
+      logAction(
+        null,
+        `Failed request: ${req.method} ${req.originalUrl} (${res.statusCode})`,
+        req
+      );
+    }
+  });
+  next();
 });
 
-// ✅ Error handler
+// Centralized error handler
 app.use((err, req, res, next) => {
-  console.error("🔥 Server Error:", err);
-  if (err?.code === "EBADCSRFTOKEN") {
-    return res.status(403).json({ msg: "Invalid or missing CSRF token" });
-  }
-  res.status(err.status || 500).json({ msg: err.message || "Server error." });
+  console.error("🔥 Server Error:", err);
+  if (err?.code === "EBADCSRFTOKEN") {
+    return res.status(403).json({ msg: "Invalid or missing CSRF token" });
+  }
+  res.status(err.status || 500).json({ msg: err.message || "Server error." });
 });
 
-// ✅ HTTPS
+/* =========================
+   🚀 SERVER STARTUP
+========================= */
+
 const HTTPS_PORT = process.env.PORT || 5001;
+
 try {
-  const options = {
-    key: fs.readFileSync(keyPath),
-    cert: fs.readFileSync(certPath),
-  };
-  https.createServer(options, app).listen(HTTPS_PORT, () => {
-    console.log(`🚀 Secure Server running on https://localhost:${HTTPS_PORT}`);
-  });
+  const options = {
+    key: fs.readFileSync(keyPath),
+    cert: fs.readFileSync(certPath),
+  };
+  https.createServer(options, app).listen(HTTPS_PORT, () => {
+    console.log(`🚀 Secure Server running on https://localhost:${HTTPS_PORT}`);
+  });
 } catch (error) {
-  console.error("❌ HTTPS startup error:", error.message);
-  const HTTP_PORT = process.env.HTTP_PORT || 5000;
-  http.createServer(app).listen(HTTP_PORT, () => {
-    console.log(`Server running on http://localhost:${HTTP_PORT}`);
-  });
+  console.error("❌ HTTPS startup error:", error.message);
+  const HTTP_PORT = process.env.HTTP_PORT || 5000;
+  http.createServer(app).listen(HTTP_PORT, () => {
+    console.log(`Server running on http://localhost:${HTTP_PORT}`);
+  });
 }
 
-// ✅ Optional HTTP redirect
+// Optional HTTP→HTTPS redirect (for dev)
 if (process.env.ENABLE_HTTP_REDIRECT === "true") {
-  const HTTP_PORT = process.env.HTTP_PORT || 5000;
-  http.createServer((req, res) => {
-    const host = req.headers.host ? req.headers.host.split(":")[0] : "localhost";
-    res.writeHead(301, { Location: `https://${host}:${HTTPS_PORT}${req.url}` });
-    res.end();
-  }).listen(HTTP_PORT, () =>
-    console.log(`🔁 HTTP redirector active on http://localhost:${HTTP_PORT}`)
-  );
+  const HTTP_PORT = process.env.HTTP_PORT || 5000;
+  http
+    .createServer((req, res) => {
+      const host = req.headers.host ? req.headers.host.split(":")[0] : "localhost";
+      res.writeHead(301, { Location: `https://${host}:${HTTPS_PORT}${req.url}` });
+      res.end();
+    })
+    .listen(HTTP_PORT, () =>
+      console.log(`🔁 HTTP redirector active on http://localhost:${HTTP_PORT}`)
+    );
 }

@@ -80,9 +80,13 @@ const AuthStatus = () => {
           Login
         </button>
         <span> | </span>
-        <button onClick={() => handleNavigate("/register")} className="nav-button">
-          Register
-        </button>
+        
+        {/*
+<button onClick={() => handleNavigate("/register")} className="nav-button">
+  Register
+</button>
+*/}
+
       </>
     );
   }

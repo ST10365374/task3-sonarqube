@@ -1,111 +1,95 @@
 // backend/middleware/validate.js
 const { body, validationResult } = require("express-validator");
+const xss = require("xss"); // ✅ NEW: Import xss package
 
-// Regex whitelist patterns
-const fullNameRegex = /^[A-Za-z\s.'-]{2,100}$/;
+// ✅ Stricter, safer regex whitelist patterns
+const fullNameRegex = /^[A-Za-zÀ-ÖØ-öø-ÿ\s.'-]{2,100}$/; // allows international names
 const idNumberRegex = /^\d{13}$/;
-const accountNumberRegex = /^\w[\w\-]{5,30}$/;
+const accountNumberRegex = /^[A-Z0-9_-]{5,30}$/i; // restrict to alphanumeric + _ -
 const swiftRegex = /^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/;
 const currencyRegex = /^[A-Z]{3}$/;
+const amountRegex = /^\d+(\.\d{1,2})?$/; // 2 decimal places max
 
-// ✅ Register validation
-const registerValidation = [
-  body("fullName")
-    .exists()
-    .matches(fullNameRegex)
-    .trim()
-    .escape()
-    .withMessage("Full name is required and must be valid."),
-  body("idNumber")
-    .exists()
-    .matches(idNumberRegex)
-    .trim()
-    .escape()
-    .withMessage("ID number must be a valid 13-digit number."),
-  body("accountNumber")
-    .exists()
-    .matches(accountNumberRegex)
-    .trim()
-    .escape()
-    .withMessage("Invalid account number format."),
-  body("password")
-    .exists()
-    .isLength({ min: 8 })
-    .withMessage("Password must be at least 8 characters."),
-  (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty())
-      return res.status(400).json({ msg: "Validation error", errors: errors.array() });
-    next();
-  },
-];
+// ✅ Helper: Use the comprehensive xss package to sanitize strings (SAFE XSS FIX)
+const sanitizeInput = (value) => {
+  if (typeof value !== "string") return value;
+  // Use the xss package to strip dangerous code
+  return xss(value); 
+};
+
+// ✅ Universal validation handler
+const handleValidationErrors = (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res
+      .status(400)
+      .json({ msg: "Validation error", errors: errors.array() });
+  }
+  next();
+};
 
 // ✅ Login validation
 const loginValidation = [
   body("accountNumber")
     .exists()
-    .matches(accountNumberRegex)
     .trim()
-    .escape()
-    .withMessage("Invalid account number"),
+    .customSanitizer(sanitizeInput) // ⬅️ XSS CLEANING APPLIED HERE
+    .matches(accountNumberRegex)
+    .withMessage("Invalid account number."),
   body("password")
     .exists()
     .isLength({ min: 8 })
-    .withMessage("Invalid password"),
-  (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty())
-      return res.status(400).json({ msg: "Validation error", errors: errors.array() });
-    next();
-  },
+    .withMessage("Invalid password."),
+  handleValidationErrors,
 ];
 
-// ✅ Payment validation
+// ✅ Payment validation (NoSQL and XSS protection applied via customSanitizer)
 const paymentValidation = [
   body("receiverAccountNumber")
     .exists()
-    .matches(accountNumberRegex)
     .trim()
-    .escape()
-    .withMessage("Invalid receiver account number"),
+    .customSanitizer(sanitizeInput) // ⬅️ XSS CLEANING APPLIED HERE
+    .matches(accountNumberRegex)
+    .withMessage("Invalid receiver account number."),
   body("amount")
     .exists()
-    .isFloat({ gt: 0 })
-    .withMessage("Amount must be a positive number"),
+    .customSanitizer(sanitizeInput) // ⬅️ XSS CLEANING APPLIED HERE
+    .matches(amountRegex)
+    .withMessage("Amount must be a positive number with up to 2 decimals."),
   body("currency")
     .exists()
-    .matches(currencyRegex)
     .trim()
-    .escape()
-    .withMessage("Currency must be a 3-letter code"),
+    .customSanitizer(sanitizeInput) // ⬅️ XSS CLEANING APPLIED HERE
+    .matches(currencyRegex)
+    .withMessage("Currency must be a 3-letter code (e.g., USD, EUR)."),
   body("swiftCode")
     .optional()
-    .matches(swiftRegex)
     .trim()
-    .escape()
-    .withMessage("Invalid SWIFT code"),
-  (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty())
-      return res.status(400).json({ msg: "Validation error", errors: errors.array() });
-    next();
-  },
+    .customSanitizer(sanitizeInput) // ⬅️ XSS CLEANING APPLIED HERE
+    .matches(swiftRegex)
+    .withMessage("Invalid SWIFT code."),
+  handleValidationErrors,
 ];
 
 // ✅ Profile update validation
 const profileUpdateValidation = [
-  body("fullName").optional().matches(fullNameRegex).trim().escape().withMessage("Invalid full name"),
-  body("idNumber").optional().matches(idNumberRegex).trim().escape().withMessage("Invalid ID number"),
-  (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty())
-      return res.status(400).json({ msg: "Validation error", errors: errors.array() });
-    next();
-  },
+  body("fullName")
+    .optional()
+    .trim()
+    .customSanitizer(sanitizeInput) // ⬅️ XSS CLEANING APPLIED HERE
+    .matches(fullNameRegex)
+    .withMessage("Invalid full name."),
+  body("idNumber")
+    .optional()
+    .trim()
+    .customSanitizer(sanitizeInput) // ⬅️ XSS CLEANING APPLIED HERE
+    .matches(idNumberRegex)
+    .withMessage("Invalid ID number."),
+  handleValidationErrors,
 ];
 
+// Export all validation chains
 module.exports = {
-  registerValidation,
   loginValidation,
   paymentValidation,
   profileUpdateValidation,

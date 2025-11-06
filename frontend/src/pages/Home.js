@@ -9,7 +9,7 @@ function Home() {
         <p className="home-subtitle">Fast • Secure • Reliable Banking</p>
         <div className="home-buttons">
           <Link to="/login" className="primary-button">Login</Link>
-          <Link to="/register" className="secondary-button">Register</Link>
+          {/* <Link to="/register" className="secondary-button">Register</Link> */}
         </div>
       </div>
     </div>

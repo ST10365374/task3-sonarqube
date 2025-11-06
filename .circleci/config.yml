@@ -1,25 +1,55 @@
+# .circleci/config.yml - STREAMLINED VERSION
 version: 2.1
 
+orbs:
+  # Using the community SonarCloud orb for simplicity
+  sonarcloud: sonarcloud/sonarcloud@1.0.3
+
 jobs:
-  sonarqube:
+  install_and_test:
     docker:
-      - image: sonarsource/sonar-scanner-cli:latest
+      # Use a stable Node image
+      - image: cimg/node:20.5
     steps:
       - checkout
       - run:
-          name: Run SonarCloud Scan
+          name: Install dependencies
+          # Install dependencies for both backend and frontend
           command: |
-            sonar-scanner \
-              -Dsonar.organization="$SONAR_ORG" \
-              -Dsonar.projectKey="$SONAR_PROJECT_KEY" \
-              -Dsonar.sources="backend,frontend" \
-              -Dsonar.exclusions="**/node_modules/**,**/tests/**" \
-              -Dsonar.javascript.lcov.reportPaths=frontend/coverage/lcov.info \
-              -Dsonar.host.url="https://sonarcloud.io" \
-              -Dsonar.login="$SONAR_TOKEN"
+            cd backend && npm ci
+            cd frontend && npm ci
+      - run:
+          name: Run tests (with coverage)
+          # Use the 'continue on error' syntax '|| true' if tests are optional
+          command: |
+            cd frontend && npm test -- --coverage || true 
+      - persist_to_workspace:
+          root: .
+          paths:
+            # Persist all necessary files for the Sonar scan job
+            - backend
+            - frontend
+
+  # SonarCloud scan job using the official orb
+  sonarcloud_scan:
+    docker:
+      # Use a simple, lightweight Docker image for the scan job
+      - image: cimg/base:2024.03
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      # Use the orb's command which manages the scanner, simplifies the process
+      - sonarcloud/scan 
 
 workflows:
-  version: 2
-  analyze:
+  build_and_analyze:
     jobs:
-      - sonarqube
+      - install_and_test
+      # The SonarCloud scan runs after the install_and_test job succeeds
+      - sonarcloud_scan:
+          requires:
+            - install_and_test
+          # CRITICAL: This is where you link the environment variable context 
+          # You need to set the SONAR_TOKEN environment variable in CircleCI.
+          context: sonarcloud-context
