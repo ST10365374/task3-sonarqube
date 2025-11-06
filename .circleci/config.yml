@@ -1,64 +1,53 @@
 version: 2.1
 
 orbs:
-  # This version is correct, but requires 'Allow uncertified public orbs' to be enabled.
   sonarcloud: sonarsource/sonarcloud@3.0.1
 
 jobs:
   install_and_test:
     docker:
-      # Use a stable Node image
       - image: cimg/node:20.5
     steps:
       - checkout
       
-      # Combined step to control directory navigation
       - run:
           name: Install Dependencies and Run Tests
           command: |
             echo "--- Installing Backend dependencies ---"
-            cd backend
-            npm ci
-            cd .. # Go back to root
+            cd backend && npm ci
+            cd .. 
 
             echo "--- Installing Frontend dependencies and Running Tests ---"
             cd frontend
             npm ci
             
-            # Run tests with coverage. '|| true' ensures the workflow continues 
-            # and the coverage report is still processed by SonarCloud, even if tests fail.
+            # This must generate frontend/coverage/lcov.info
             npm test -- --coverage || true 
-            
-            cd .. # Go back to root
+            cd ..
 
-      # Persist the necessary files (source code, node_modules, and coverage report)
+      # CRITICAL FIX: Explicitly persist the coverage directory and files.
       - persist_to_workspace:
           root: .
           paths:
             - backend
             - frontend
-            # CRITICAL FIX: Explicitly persist the directory containing the lcov.info file
-            - frontend/coverage 
+            - frontend/coverage/lcov.info # <--- Explicitly persist the file
 
-  # SonarCloud scan job using the official orb
+  # sonarcloud_scan job remains the same...
   sonarcloud_scan:
     docker:
-      # Use a simple, lightweight Docker image for the scan job
       - image: cimg/base:current
     steps:
       - checkout
       - attach_workspace:
           at: .
-      # Use the orb's command. It handles the sonar-scanner execution.
       - sonarcloud/scan 
 
 workflows:
   build_and_analyze:
     jobs:
       - install_and_test
-      # The SonarCloud scan runs after the install_and_test job succeeds
       - sonarcloud_scan:
           requires:
             - install_and_test
-          # CRITICAL: This is the Context where your SONAR_TOKEN is stored
           context: sonarcloud-context
