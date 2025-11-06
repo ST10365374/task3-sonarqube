@@ -1,4 +1,3 @@
-# .circleci/config.yml - FIXED VERSION
 version: 2.1
 
 orbs:
@@ -30,7 +29,7 @@ jobs:
             # and the coverage report is still processed by SonarCloud, even if tests fail.
             npm test -- --coverage || true 
             
-            cd .. # Go back to root (optional, but clean)
+            cd .. # Go back to root
 
       # Persist the necessary files (source code, node_modules, and coverage report)
       - persist_to_workspace:
@@ -38,6 +37,8 @@ jobs:
           paths:
             - backend
             - frontend
+            # CRITICAL FIX: Explicitly persist the directory containing the lcov.info file
+            - frontend/coverage 
 
   # SonarCloud scan job using the official orb
   sonarcloud_scan:
