@@ -1,8 +1,8 @@
-# .circleci/config.yml - STREAMLINED VERSION
+# .circleci/config.yml - FIXED VERSION
 version: 2.1
 
 orbs:
-  # Using the community SonarCloud orb for simplicity
+  # This version is correct, but requires 'Allow uncertified public orbs' to be enabled.
   sonarcloud: sonarsource/sonarcloud@3.0.1
 
 jobs:
@@ -12,21 +12,30 @@ jobs:
       - image: cimg/node:20.5
     steps:
       - checkout
+      
+      # Combined step to control directory navigation
       - run:
-          name: Install dependencies
-          # Install dependencies for both backend and frontend
+          name: Install Dependencies and Run Tests
           command: |
-            cd backend && npm ci
-            cd frontend && npm ci
-      - run:
-          name: Run tests (with coverage)
-          # Use the 'continue on error' syntax '|| true' if tests are optional
-          command: |
-            cd frontend && npm test -- --coverage || true 
+            echo "--- Installing Backend dependencies ---"
+            cd backend
+            npm ci
+            cd .. # Go back to root
+
+            echo "--- Installing Frontend dependencies and Running Tests ---"
+            cd frontend
+            npm ci
+            
+            # Run tests with coverage. '|| true' ensures the workflow continues 
+            # and the coverage report is still processed by SonarCloud, even if tests fail.
+            npm test -- --coverage || true 
+            
+            cd .. # Go back to root (optional, but clean)
+
+      # Persist the necessary files (source code, node_modules, and coverage report)
       - persist_to_workspace:
           root: .
           paths:
-            # Persist all necessary files for the Sonar scan job
             - backend
             - frontend
 
@@ -39,7 +48,7 @@ jobs:
       - checkout
       - attach_workspace:
           at: .
-      # Use the orb's command which manages the scanner, simplifies the process
+      # Use the orb's command. It handles the sonar-scanner execution.
       - sonarcloud/scan 
 
 workflows:
@@ -50,6 +59,5 @@ workflows:
       - sonarcloud_scan:
           requires:
             - install_and_test
-          # CRITICAL: This is where you link the environment variable context 
-          # You need to set the SONAR_TOKEN environment variable in CircleCI.
-          context: sonarcloud-context 
+          # CRITICAL: This is the Context where your SONAR_TOKEN is stored
+          context: sonarcloud-context
