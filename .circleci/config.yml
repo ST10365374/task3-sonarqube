@@ -52,4 +52,4 @@ workflows:
             - install_and_test
           # CRITICAL: This is where you link the environment variable context 
           # You need to set the SONAR_TOKEN environment variable in CircleCI.
-          context: sonarcloud-context
+          context: sonarcloud-context 
