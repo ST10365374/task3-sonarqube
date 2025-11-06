@@ -1,0 +1,25 @@
+version: 2.1
+
+jobs:
+  sonarqube:
+    docker:
+      - image: sonarsource/sonar-scanner-cli:latest
+    steps:
+      - checkout
+      - run:
+          name: Run SonarCloud Scan
+          command: |
+            sonar-scanner \
+              -Dsonar.organization="$SONAR_ORG" \
+              -Dsonar.projectKey="$SONAR_PROJECT_KEY" \
+              -Dsonar.sources="backend,frontend" \
+              -Dsonar.exclusions="**/node_modules/**,**/tests/**" \
+              -Dsonar.javascript.lcov.reportPaths=frontend/coverage/lcov.info \
+              -Dsonar.host.url="https://sonarcloud.io" \
+              -Dsonar.login="$SONAR_TOKEN"
+
+workflows:
+  version: 2
+  analyze:
+    jobs:
+      - sonarqube

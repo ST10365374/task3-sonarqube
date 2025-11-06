@@ -1,4 +1,3 @@
-// backend/server.js
 require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
@@ -7,20 +6,20 @@ const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const fs = require("fs");
 const https = require("https");
-const http = require("http");              // ✅ Added: optional HTTP redirect
+const http = require("http");
 const cookieParser = require("cookie-parser");
 const csrfProtection = require("./middleware/csrf");
-const mongoSanitize = require("express-mongo-sanitize"); // ✅ Added
-const xss = require("xss-clean");                       // ✅ Added
+const sanitizeRequest = require("./middleware/sanitize");
+const cleanXSS = require("./middleware/cleanXSS"); // ✅ new XSS cleaner
+const logAction = require("./utils/auditLogger");
 
 const app = express();
 app.set("trust proxy", 1);
 
-// SSL paths
 const certPath = "./certs/cert.pem";
 const keyPath = "./certs/key.pem";
 
-// ✅ Security middleware
+// ✅ Helmet security
 app.use(
   helmet({
     contentSecurityPolicy: {
@@ -35,10 +34,12 @@ app.use(
   })
 );
 app.disable("x-powered-by");
-app.use(mongoSanitize()); // ✅ Prevent NoSQL injection
-app.use(xss());           // ✅ Prevent reflected XSS
 
-// ✅ CORS — same as yours
+// ✅ Sanitize and XSS clean
+app.use(sanitizeRequest);
+app.use(cleanXSS);
+
+// ✅ CORS
 app.use(
   cors({
     origin: "https://localhost:3000",
@@ -48,20 +49,29 @@ app.use(
   })
 );
 
-// ✅ Rate limiter (unchanged)
+// ✅ Rate limit
 app.use(
   rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 100,
-    message: { msg: "Too many requests, please try again later" },
+    message: { msg: "Too many requests, try again later." },
   })
 );
 
-// ✅ Body & cookie parsing
+// ✅ Body & cookies
 app.use(express.json({ limit: "10kb" }));
 app.use(cookieParser());
 
-// ✅ Optional HTTPS enforcement (redirect HTTP → HTTPS)
+// ✅ HSTS
+app.use(
+  helmet.hsts({
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true,
+  })
+);
+
+// ✅ Redirect HTTP→HTTPS only in production
 if (process.env.NODE_ENV === "production") {
   app.use((req, res, next) => {
     if (!req.secure && req.get("x-forwarded-proto") !== "https") {
@@ -69,19 +79,25 @@ if (process.env.NODE_ENV === "production") {
     }
     next();
   });
-  app.use(helmet.hsts({ maxAge: 31536000, includeSubDomains: true, preload: true }));
 }
 
-// ✅ CSRF token route
+// ✅ CSRF token
 app.get("/api/csrf-token", csrfProtection, (req, res) => {
-  return res.json({ csrfToken: req.csrfToken() });
+  res.json({ csrfToken: req.csrfToken() });
 });
 
-// ✅ Connect Mongo
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ MongoDB Connected"))
-  .catch((err) => console.error("❌ MongoDB Error:", err));
+// ✅ Health
+app.get("/api/health", (req, res) => res.json({ status: "ok" }));
+
+// ✅ MongoDB
+(async () => {
+  try {
+    await mongoose.connect(process.env.MONGO_URI);
+    console.log("✅ MongoDB Connected");
+  } catch (err) {
+    console.error("❌ MongoDB Error:", err);
+  }
+})();
 
 // ✅ Routes
 const authRoutes = require("./routes/auth");
@@ -89,19 +105,30 @@ app.use("/api/auth", authRoutes.router);
 app.use("/api/payments", require("./routes/payments"));
 app.use("/api/admin", require("./routes/admin"));
 
-// ✅ Health check (helps CircleCI/Sonar runs)
-app.get("/api/health", (req, res) => res.json({ status: "ok" }));
+// ✅ Log failed requests
+app.use((req, res, next) => {
+  res.on("finish", () => {
+    if (res.statusCode >= 400) {
+      logAction(
+        null,
+        `Failed request: ${req.method} ${req.originalUrl} (${res.statusCode})`,
+        req
+      );
+    }
+  });
+  next();
+});
 
-// ✅ Global error handler
+// ✅ Error handler
 app.use((err, req, res, next) => {
   console.error("🔥 Server Error:", err);
-  if (err && err.code === "EBADCSRFTOKEN") {
+  if (err?.code === "EBADCSRFTOKEN") {
     return res.status(403).json({ msg: "Invalid or missing CSRF token" });
   }
   res.status(err.status || 500).json({ msg: err.message || "Server error." });
 });
 
-// ✅ HTTPS server
+// ✅ HTTPS
 const HTTPS_PORT = process.env.PORT || 5001;
 try {
   const options = {
@@ -112,13 +139,14 @@ try {
     console.log(`🚀 Secure Server running on https://localhost:${HTTPS_PORT}`);
   });
 } catch (error) {
-  console.error("❌ ERROR STARTING HTTPS SERVER:", error.message);
-  http.createServer(app).listen(HTTP_PORT || 5000, () => {
-    console.log(`Server running on http://localhost:${HTTP_PORT || 5000}`);
+  console.error("❌ HTTPS startup error:", error.message);
+  const HTTP_PORT = process.env.HTTP_PORT || 5000;
+  http.createServer(app).listen(HTTP_PORT, () => {
+    console.log(`Server running on http://localhost:${HTTP_PORT}`);
   });
 }
 
-// ✅ Optional redirector (for local demo)
+// ✅ Optional HTTP redirect
 if (process.env.ENABLE_HTTP_REDIRECT === "true") {
   const HTTP_PORT = process.env.HTTP_PORT || 5000;
   http.createServer((req, res) => {

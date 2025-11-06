@@ -3,24 +3,30 @@ const { body, validationResult } = require("express-validator");
 
 // Regex whitelist patterns
 const fullNameRegex = /^[A-Za-z\s.'-]{2,100}$/;
-const idNumberRegex = /^\d{13}$/; // SA ID
-const accountNumberRegex = /^\w[\w\-]{5,30}$/; // allow letters/numbers/hyphen
+const idNumberRegex = /^\d{13}$/;
+const accountNumberRegex = /^\w[\w\-]{5,30}$/;
 const swiftRegex = /^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/;
 const currencyRegex = /^[A-Z]{3}$/;
 
-// ✅ NEW: Register validation
+// ✅ Register validation
 const registerValidation = [
   body("fullName")
     .exists()
     .matches(fullNameRegex)
+    .trim()
+    .escape()
     .withMessage("Full name is required and must be valid."),
   body("idNumber")
     .exists()
     .matches(idNumberRegex)
+    .trim()
+    .escape()
     .withMessage("ID number must be a valid 13-digit number."),
   body("accountNumber")
     .exists()
     .matches(accountNumberRegex)
+    .trim()
+    .escape()
     .withMessage("Invalid account number format."),
   body("password")
     .exists()
@@ -34,10 +40,13 @@ const registerValidation = [
   },
 ];
 
+// ✅ Login validation
 const loginValidation = [
   body("accountNumber")
     .exists()
     .matches(accountNumberRegex)
+    .trim()
+    .escape()
     .withMessage("Invalid account number"),
   body("password")
     .exists()
@@ -51,10 +60,13 @@ const loginValidation = [
   },
 ];
 
+// ✅ Payment validation
 const paymentValidation = [
   body("receiverAccountNumber")
     .exists()
     .matches(accountNumberRegex)
+    .trim()
+    .escape()
     .withMessage("Invalid receiver account number"),
   body("amount")
     .exists()
@@ -63,10 +75,14 @@ const paymentValidation = [
   body("currency")
     .exists()
     .matches(currencyRegex)
+    .trim()
+    .escape()
     .withMessage("Currency must be a 3-letter code"),
   body("swiftCode")
     .optional()
     .matches(swiftRegex)
+    .trim()
+    .escape()
     .withMessage("Invalid SWIFT code"),
   (req, res, next) => {
     const errors = validationResult(req);
@@ -76,9 +92,10 @@ const paymentValidation = [
   },
 ];
 
+// ✅ Profile update validation
 const profileUpdateValidation = [
-  body("fullName").optional().matches(fullNameRegex).withMessage("Invalid full name"),
-  body("idNumber").optional().matches(idNumberRegex).withMessage("Invalid ID number"),
+  body("fullName").optional().matches(fullNameRegex).trim().escape().withMessage("Invalid full name"),
+  body("idNumber").optional().matches(idNumberRegex).trim().escape().withMessage("Invalid ID number"),
   (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty())
