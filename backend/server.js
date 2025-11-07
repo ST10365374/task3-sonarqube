@@ -1,4 +1,3 @@
-// backend/server.js - FINAL CORRECTED VERSION
 require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
@@ -6,7 +5,6 @@ const cors = require("cors");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const hpp = require("hpp");
-// const mongoSanitize = require("express-mongo-sanitize"); // ❌ Removed: Caused the conflict
 const fs = require("fs");
 const https = require("https");
 const http = require("http");
@@ -21,7 +19,7 @@ app.set("trust proxy", 1);
 // ✅ SSL certs (development self-signed)
 // 🔑 CRITICAL FIX: The correct path is just ./certs/
 const certPath = "./certs/cert.pem"; 
-const keyPath = "./certs/key.pem";   
+const keyPath = "./certs/key.pem";   
 
 /* =========================
    🔐 SECURITY MIDDLEWARES
@@ -39,11 +37,11 @@ app.use(
       },
     },
     crossOriginEmbedderPolicy: false,
-    strictTransportSecurity: {
-      maxAge: 31536000, 
-      includeSubDomains: true,
-      preload: true,
-    }
+    strictTransportSecurity: {
+      maxAge: 31536000, 
+      includeSubDomains: true,
+      preload: true,
+    }
   })
 );
 app.disable("x-powered-by");
@@ -146,7 +144,8 @@ app.use((req, res, next) => {
 app.use((err, req, res, next) => {
   console.error("🔥 Server Error:", err);
   if (err?.code === "EBADCSRFTOKEN") {
-    return res.status(403).json({ msg: "Invalid or missing CSRF token" });
+    // Example: res.redirect(req.query.redirectTo);
+    return res.redirect('/login'); // Or '/' - CRITICAL FIX applied here
   }
   res.status(err.status || 500).json({ msg: err.message || "Server error." });
 });

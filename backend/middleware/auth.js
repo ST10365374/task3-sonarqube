@@ -4,21 +4,22 @@ const logAction = require("../utils/auditLogger");
 
 // ✅ Give the middleware a descriptive name
 function authenticateUser(req, res, next) {
-  const token = req.cookies?.token;
-  if (!token) {
-    logAction(null, "Unauthorized access attempt - no token", req);
-    return res.status(401).json({ msg: "No token, authorization denied" });
-  }
+  const token = req.cookies?.token;
+  if (!token) {
+    logAction(null, "Unauthorized access attempt - no token", req);
+    return res.status(401).json({ msg: "No token, authorization denied" });
+  }
 
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = { userId: decoded.userId, role: decoded.role };
-    next();
-  } catch (err) {
-    logAction(null, "Invalid JWT detected", req);
-    // ✅ Handle explicitly by returning a proper response
-    return res.status(401).json({ msg: "Token is not valid" });
-  }
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = { userId: decoded.userId, role: decoded.role };
+    next();
+  } catch (err) {
+    // Log error and send 401 response (Updated Block)
+    logAction(null, "Invalid JWT detected", req);
+    console.error('JWT verification failed:', err.message); // <-- Added specific error logging
+    return res.status(401).json({ message: "Access denied. Invalid token." }); // <-- Updated response message
+  }
 }
 
 module.exports = authenticateUser;
