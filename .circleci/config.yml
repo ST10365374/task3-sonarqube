@@ -10,28 +10,31 @@ jobs:
     steps:
       - checkout
       
+      # Step 1: Install Dependencies (Explicitly separate from tests)
       - run:
-          name: Install Dependencies and Run Tests
+          name: Install Dependencies
           command: |
             echo "--- Installing Backend dependencies ---"
             cd backend && npm ci
-            cd .. 
+            echo "--- Installing Frontend dependencies ---"
+            cd ../frontend && npm ci
 
-            echo "--- Installing Frontend dependencies and Running Tests ---"
+      # Step 2: Run Tests and Generate Coverage (Explicitly separate)
+      - run:
+          name: Run Frontend Tests and Generate Coverage
+          command: |
             cd frontend
-            npm ci
-            
             # This must generate frontend/coverage/lcov.info
             npm test -- --coverage || true 
             cd ..
 
-      # CRITICAL FIX: Explicitly persist the coverage directory and files.
+      # Step 3: Persist Workspace (Explicitly list the coverage file for reliability)
       - persist_to_workspace:
           root: .
           paths:
             - backend
             - frontend
-            - frontend/coverage/lcov.info # <--- Explicitly persist the file
+            - frontend/coverage/lcov.info # <--- Guarantees the file is transferred
 
   # sonarcloud_scan job remains the same...
   sonarcloud_scan:
