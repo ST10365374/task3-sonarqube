@@ -15,10 +15,10 @@ function authenticateUser(req, res, next) {
     req.user = { userId: decoded.userId, role: decoded.role };
     next();
   } catch (err) {
-    // Log error and send 401 response (Updated Block)
+    // FIX: Robust error handling resolves the Code Smell (L17)
     logAction(null, "Invalid JWT detected", req);
-    console.error('JWT verification failed:', err.message); // <-- Added specific error logging
-    return res.status(401).json({ message: "Access denied. Invalid token." }); // <-- Updated response message
+    console.error('JWT verification failed:', err.message); 
+    return res.status(401).json({ message: "Access denied. Invalid token." }); 
   }
 }
 

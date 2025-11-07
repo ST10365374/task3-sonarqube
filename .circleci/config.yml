@@ -19,11 +19,13 @@ jobs:
             echo "--- Installing Frontend dependencies ---"
             cd ../frontend && npm ci
 
-      # Step 2: Run Tests and Generate Coverage (Explicitly separate)
+      # Step 2: Run Tests and Generate Coverage (FIX for 0.0% coverage)
       - run:
           name: Run Frontend Tests and Generate Coverage
           command: |
             cd frontend
+            # FIX: Create directory to ensure lcov.info generation is successful
+            mkdir -p coverage
             # This must generate frontend/coverage/lcov.info
             npm test -- --coverage || true 
             cd ..
